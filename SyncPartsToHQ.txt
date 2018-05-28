@@ -1,6 +1,6 @@
 USE [system]
 GO
-/****** Object:  StoredProcedure [dbo].[ZKUP_SyncronizeParts_with_input]    Script Date: 28/05/2018 09:54:18 ******/
+/****** Object:  StoredProcedure [dbo].[ZKUP_SyncronizePartsHQ]    Script Date: 28/05/2018 09:58:07 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -8,7 +8,7 @@ GO
 
 
 -- ZKUP_SyncronizeParts 'hemed'
-ALTER PROCEDURE [dbo].[ZKUP_SyncronizeParts_with_input]
+ALTER PROCEDURE [dbo].[ZKUP_SyncronizePartsHQ]
 	@debugflag bit = 0
 AS
 BEGIN
@@ -25,11 +25,10 @@ declare @dname as varchar(50);
 declare c cursor for
 select NAME, KUPENV, DB, LASTSYNCDATE, BOOKNUMID
 from system.dbo.ZKUP_KUPOT
-where NAME <> '' 
-and SYNCPARTFLAG = 'Y';
+where NAME = 'HEADOFFICE' -- and SYNCFLAG = 'Y';
 
 declare @name as varchar(50), @kupenv as varchar(50);
-declare @db as varchar(50), @LASTSYNCDATE as int;
+declare @db as varchar(100), @LASTSYNCDATE as int;
 declare @booknumid as varchar(50);
 
 open c;
@@ -88,7 +87,7 @@ begin
 		case when coalesce(INFO_PARTMAGENTO.special_price,0) = 0 then PARTPRICE.VATPRICE else coalesce(INFO_PARTMAGENTO.special_price,0) end [PRICE],
 		PART.UDATE
 		FROM [' + @dname + '].[dbo].PART PART
-		inner join [' + @dname + '].[dbo].UNIT UNIT on PART.PUNIT = UNIT.UNIT AND PART.ROYY_SYNCCASH = ''Y''
+		inner join [' + @dname + '].[dbo].UNIT UNIT on PART.PUNIT = UNIT.UNIT
 		inner join [' + @dname + '].[dbo].PARTPARAM PARTPARAM on PART.PART = PARTPARAM.PART
 		left outer join [' + @dname + '].[dbo].PARTPRICE PARTPRICE on PART.PART = PARTPRICE.PART AND PARTPRICE.PLIST = -1 AND PARTPRICE.PLDATE = @PRICELISTDATE
 		left outer join [' + @dname + '].[dbo].TAXPERCENT TAXPERCENT on DATEDIFF(mi, ''01/01/1988'', getdate()) BETWEEN TAXPERCENT.FROMDATE AND TAXPERCENT.TODATE
@@ -96,9 +95,8 @@ begin
 		left outer join [' + @dname + '].[dbo].ZKUP_CONVPARAMS F on PART.FAMILY = F.KEY1 AND F.TYPE = ''F''
 		left join [' + @dname + '].[dbo].INFO_PARTMAGENTO INFO_PARTMAGENTO on INFO_PARTMAGENTO.PART = PART.PART
 		WHERE PART.PART > 0
-		-- AND PART.PARTNAME in (''000026'',''000035'')
+		--AND PART.PARTNAME in (''000026'')
 		AND PART.INFO_BRANCH = 0
-		
 		
 		GROUP BY PART.PART, PARTNAME,
 				 system.dbo.tabula_hebconvert(PARTDES), 
@@ -109,12 +107,11 @@ begin
 				 PART.UDATE'
 		;
 
-		
+
 		print '==============';
 		print replace(@sqlquery,'@PRICELISTDATE', convert(varchar(20),@PRICELISTDATE));
 		print '==============';
 
-		--select * from #tempPriorityTable;
 		exec sp_executesql @sqlquery , N'@PRICELISTDATE int', 
 			@PRICELISTDATE
 
@@ -129,7 +126,7 @@ begin
 		set @sqlquery = 
 		'INSERT INTO #tempKupotTable SELECT fldCode FROM ' + @toEnv + '.[dbo].tblItems'
 		;
-		
+
 		exec sp_executesql @sqlquery;
 
 		declare @PART int
@@ -147,22 +144,20 @@ begin
 
 		set @i = 0;
 
-		if (1=1) -- insert parts into kupot db
+		if (1=1) -- don't insert parts into kupot db
 		begin
-		    print('start cursor');
 			DECLARE db_cursor CURSOR FOR  
 			SELECT PART, #tempPriorityTable.PARTNAME, PARTDES, BARCODE, UNIT, FAMILY, PRICE, coalesce(#tempKupotTable.PARTNAME, 0), UDATE
 			FROM #tempPriorityTable
 			left outer join #tempKupotTable on #tempKupotTable.PARTNAME = #tempPriorityTable.PART 
-			--inner join #tempKupotTable on #tempKupotTable.PARTNAME = #tempPriorityTable.PART 
 			;
 
 			OPEN db_cursor  
 			FETCH NEXT FROM db_cursor INTO @PART, @PARTNAME, @PARTDES, @BARCODE, @UNIT, @FAMILY, @PRICE, @KUPOTPARTNAME, @UDATE  
-			print (@PARTNAME);
+
 			WHILE @@FETCH_STATUS = 0  
 			BEGIN 
-			    print (@PARTNAME);
+
 				declare @ppp int
 				-- set @ppp = case when ISNUMERIC(@PARTNAME) = 1 then CONVERT(int, @PARTNAME) else @PART end
 				set @ppp = @PART;
@@ -223,7 +218,6 @@ begin
 				exec sp_executesql @sqlquery ,
 				 N'@ppp int, @PARTDES varchar(48), @BARCODE varchar(16), @PRICEINT int, @UNIT int, @FAMILY int, @UDATE int', 
 					@ppp, @PARTDES, @BARCODE, @PRICEINT, @UNIT, @FAMILY, @UDATE 
-					
 
 					if @debugflag <> 0 PRINT '>> Fetch ' + (CONVERT( VARCHAR(24), GETDATE(), 121));
 				   FETCH NEXT FROM db_cursor INTO @PART, @PARTNAME, @PARTDES, @BARCODE, @UNIT, @FAMILY, @PRICE, @KUPOTPARTNAME, @UDATE 
@@ -251,7 +245,7 @@ begin
 		'INSERT INTO [' + @dname + '].[dbo].ZKUP_PART(PARTNAME, PARTDES, BARCODE, PRICE, UNIT, FAMILY, UDATE)
 			SELECT fldCode, left(fldName,48), fldBarcode, coalesce(fldSalePrice, 0.0) / 100.0, fldUnit, fldDepartment, DATEDIFF(mi, ''01/01/1988'', coalesce(fldUpdateDate, getdate()))
 		FROM ' + @toEnv + '.[dbo].tblItems' ;
-		--exec sp_executesql @sqlquery
+		exec sp_executesql @sqlquery
 
 		print 'Inserted:' + convert(varchar(10),@iLines);
 		print 'Updated :' + convert(varchar(10),@uLines);
@@ -260,17 +254,9 @@ begin
 		exec sp_executesql @sqlquery
 
 		/* update secondary cashier */
-		/* skit if HQ */
-		if @name<>'HEADOFFICE' AND (@iLines + @uLines > 0) -- do not update SecCashier if no records prcesses
-		begin
 		set @sqlquery = 'exec ' + @toEnv + '.[dbo].INFO_UpdateSecCashier'
 		exec sp_executesql @sqlquery;
-		END
-		set @sqlquery = 'select * from ' + @toEnv  + '.[dbo].tblReplicationTables 
-		where fldTableName = ''tblItems''';
-		print 'Replication output:';
-		exec sp_executesql @sqlquery;
-		/* end skip if HQ */
+
 	end try
 	begin catch
 		declare @errMsg as varchar(8000);
@@ -286,29 +272,6 @@ end
 
 close c;
 deallocate c;
--- update PART.ROYY_SYNCCASH
-					set @sqlquery = 
-						'UPDATE [' + @dname + '].[dbo].PART SET ROYY_SYNCCASH = ''''
-						WHERE PART IN(
-						SELECT PART.PART 
-						FROM [' + @dname + '].[dbo].PART PART
-						inner join [' + @dname + '].[dbo].UNIT UNIT on PART.PUNIT = UNIT.UNIT AND PART.ROYY_SYNCCASH = ''Y''
-						inner join [' + @dname + '].[dbo].PARTPARAM PARTPARAM on PART.PART = PARTPARAM.PART
-						left outer join [' + @dname + '].[dbo].PARTPRICE PARTPRICE on PART.PART = PARTPRICE.PART AND PARTPRICE.PLIST = -1 AND PARTPRICE.PLDATE = @PRICELISTDATE
-						left outer join [' + @dname + '].[dbo].TAXPERCENT TAXPERCENT on DATEDIFF(mi, ''01/01/1988'', getdate()) BETWEEN TAXPERCENT.FROMDATE AND TAXPERCENT.TODATE
-						left outer join [' + @dname + '].[dbo].ZKUP_CONVPARAMS U on PART.PUNIT = U.KEY1 AND U.TYPE = ''U''
-						left outer join [' + @dname + '].[dbo].ZKUP_CONVPARAMS F on PART.FAMILY = F.KEY1 AND F.TYPE = ''F''
-						left join [' + @dname + '].[dbo].INFO_PARTMAGENTO INFO_PARTMAGENTO on INFO_PARTMAGENTO.PART = PART.PART
-						WHERE PART.PART > 0
-						-- AND PART.PARTNAME in (''000026'',''000035'')
-						AND PART.INFO_BRANCH = 0)';
-
-				
-					print (@sqlquery);
-					exec sp_executesql @sqlquery, N'@PRICELISTDATE int', 
-			@PRICELISTDATE ;
-					-- end update 
-
 
 END 
 
