@@ -25,7 +25,8 @@ declare @dname as varchar(50);
 declare c cursor for
 select NAME, KUPENV, DB, LASTSYNCDATE, BOOKNUMID
 from system.dbo.ZKUP_KUPOT
-where NAME = 'HEADOFFICE' -- and SYNCFLAG = 'Y';
+where NAME = 'HEADOFFICE' 
+ and SYNCPARTFLAG = 'Y';
 
 declare @name as varchar(50), @kupenv as varchar(50);
 declare @db as varchar(100), @LASTSYNCDATE as int;
