@@ -1,6 +1,6 @@
 USE [system]
 GO
-/****** Object:  StoredProcedure [dbo].[ZKUP_SyncronizeParts2]    Script Date: 06/02/2018 17:27:09 ******/
+/****** Object:  StoredProcedure [dbo].[ZKUP_SyncronizeParts2]    Script Date: 28/05/2018 07:58:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -25,7 +25,9 @@ declare @dname as varchar(50);
 declare c cursor for
 select NAME, KUPENV, DB, LASTSYNCDATE, BOOKNUMID
 from system.dbo.ZKUP_KUPOT
-where NAME <> '' and SYNCFLAG = 'Y';
+where NAME <> '' 
+and NAME <> 'HEADOFFICE'
+and SYNCPARTFLAG = 'Y';
 
 declare @name as varchar(50), @kupenv as varchar(50);
 declare @db as varchar(50), @LASTSYNCDATE as int;
