@@ -1,6 +1,6 @@
 USE [system]
 GO
-/****** Object:  StoredProcedure [dbo].[ZKUP_SyncronizePartsHQ]    Script Date: 28/05/2018 09:58:07 ******/
+/****** Object:  StoredProcedure [dbo].[ZKUP_SyncronizePartsHQ]    Script Date: 04/06/2018 16:08:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -256,7 +256,7 @@ begin
 
 		/* update secondary cashier */
 		set @sqlquery = 'exec ' + @toEnv + '.[dbo].INFO_UpdateSecCashier'
-		exec sp_executesql @sqlquery;
+		--exec sp_executesql @sqlquery;
 
 	end try
 	begin catch
