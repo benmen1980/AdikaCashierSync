@@ -59,7 +59,10 @@ fldBarcode = @BARCODE,
  fldDepartment = @FAMILY, 
  fldUpdateDate = getdate(), 
  fldNameHEB = @PARTDES, 
- fldAdditionalInfoHEB = @PARTDES 
+ fldAdditionalInfoHEB = @PARTDES ,
+ fldAllowReturn = 1,
+ fldRequireReturnTicket = 1,
+ fldPromotionable = 1
 WHERE coalesce(fldCode,0) = @ppp  --and dateadd(mi, @UDATE, '01/01/1988') > fldUpdateDate
 and (coalesce(fldName,'') <> @PARTDES 
 or coalesce(fldBarcode,'') <> @BARCODE
