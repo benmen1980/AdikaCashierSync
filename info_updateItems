@@ -1,0 +1,79 @@
+USE [ProfitAge]
+GO
+/****** Object:  StoredProcedure [dbo].[INFO_UpdateItems]    Script Date: 06/11/2018 11:50:34 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+-- =============================================
+-- Author:		Infobase
+-- Create date: 
+-- Description:	
+-- =============================================
+ALTER PROCEDURE [dbo].[INFO_UpdateItems] 
+	-- Add the parameters for the stored procedure here
+ @ppp int,  
+ @PARTDES varchar(48),
+ @BARCODE varchar(16),
+ @UNIT int ,
+ @FAMILY int, 
+ @PRICEINT int,
+ @UDATE int 
+
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT on;
+	
+if coalesce(@ppp,0) <= 1 
+begin
+	raiserror ('Invalid fldCode',16,1);
+	return; -- don't overwrite general part
+end
+
+if coalesce(@BARCODE,'') = ''
+begin
+	raiserror ('Invalid BARCODE',16,1);
+	return; -- don't overwrite general part
+end
+
+
+if coalesce(@PARTDES,'') = ''
+begin
+	raiserror ('Invalid PARTDES',16,1);
+	return; -- don't overwrite general part
+end
+
+if @UNIT is null set @UNIT = 0;
+if @FAMILY is null set @FAMILY = 0;
+if @PRICEINT is null set @PRICEINT = 0;
+
+
+UPDATE ProfitAge.[dbo].tblItems 
+SET fldName = @PARTDES, 
+fldBarcode = @BARCODE,
+ fldSalePrice = @PRICEINT, 
+ fldUnit = @UNIT, 
+ fldDepartment = @FAMILY, 
+ fldUpdateDate = getdate(), 
+ fldNameHEB = @PARTDES, 
+ fldAdditionalInfoHEB = @PARTDES 
+WHERE coalesce(fldCode,0) = @ppp  --and dateadd(mi, @UDATE, '01/01/1988') > fldUpdateDate
+and (coalesce(fldName,'') <> @PARTDES 
+or coalesce(fldBarcode,'') <> @BARCODE
+or coalesce(fldSalePrice,0) <> @PRICEINT
+or coalesce(fldUnit,0) <> @UNIT
+or coalesce(fldDepartment,0) <> @FAMILY
+or coalesce(fldNameHEB,'') <> @PARTDES
+or coalesce(fldAdditionalInfoHEB,'') <> @PARTDES 
+);
+
+if @@rowcount > 0 
+begin
+	print 'fldCode ' + convert(Varchar,@ppp) + ' (' + @BARCODE + ') updated' ;		
+end
+
+END
+
