@@ -1,6 +1,6 @@
 USE [system]
 GO
-/****** Object:  StoredProcedure [dbo].[ZKUP_SyncronizeSales3]    Script Date: 11/06/2018 10:50:49 ******/
+/****** Object:  StoredProcedure [dbo].[ZKUP_SyncronizeSales3]    Script Date: 11/06/2018 15:49:24 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -10,6 +10,7 @@ GO
 
 --exec [dbo].[ZKUP_SyncronizeSales] 'hemed'
 ALTER PROCEDURE [dbo].[ZKUP_SyncronizeSales3]
+	@daysback int = 1
 AS
 BEGIN
 	SET NOCOUNT off;
@@ -51,7 +52,7 @@ begin
 		break;
 	end
 	
-	set @LASTSYNCDATE = @LASTSYNCDATE - (24*60); -- 1 day overlap
+	set @LASTSYNCDATE = @LASTSYNCDATE - (24*60 * @daysback); -- 1 day overlap
 	
 	begin try
 	
