@@ -74,6 +74,9 @@ or coalesce(fldAdditionalInfoHEB,'') <> @PARTDES
 or fldAllowReturn IS NULL
 or fldRequireReturnTicket IS NULL
 or  fldPromotionable IS NULL
+or fldAllowReturn = 0
+or fldRequireReturnTicket = 0
+or  fldPromotionable = 0
 );
 
 if @@rowcount > 0 
